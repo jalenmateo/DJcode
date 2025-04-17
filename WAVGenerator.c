@@ -151,149 +151,112 @@ int writeWavFile(const char *filename, WavHeader *header, const short int *buffe
 // --- Temporary Main Function for Testing ---
 #ifdef WAV_GENERATOR_TEST_MAIN
 
-// --- Constants from Example ---
-// Note Frequencies
-const float D2 = 73.42f;
-const float G2 = 98.00f;
-const float A2 = 110.00f;
-const float B2 = 123.47f;
-const float D3 = 146.83f;
-const float G3 = 196.00f;
-const float A3 = 220.00f;
-const float B3 = 246.94f;
-const float Cs4 = 277.18f;
-const float D4 = 293.66f;
-const float E4 = 329.63f;
-const float Fs4 = 369.99f;
-const float G4 = 392.00f;
-const float A4 = 440.00f;
-const float B4 = 493.88f;
+#include "soundwaves.h"
 
-// Timing
-#define SAMPLE_RATE DEFAULT_SAMPLE_RATE
-#define NUM_MEASURES_TO_PLAY (4 * 4) // 16 measures total
-#define BEATS_PER_MEASURE 4
-#define MS_PER_BEAT 500
-#define SAMPLES_PER_BEAT ((SAMPLE_RATE * MS_PER_BEAT) / 1000)
-#define BUFFER_SIZE_SAMPLES ((size_t)NUM_MEASURES_TO_PLAY * BEATS_PER_MEASURE * SAMPLES_PER_BEAT)
+// Test pattern constants
+#define NUM_MEASURES 8  // 8 measures total
+#define BUFFER_SIZE_SAMPLES (NUM_MEASURES * BEATS_PER_MEASURE * SAMPLES_PER_BEAT)
 
-// Buffer (global for simplicity in this test adaptation)
-short int *g_buffer = NULL;
-
-// --- Adapted Play Function ---
-// Uses addSineWave from this file
-void play(float freq, float duration_beats, int measure, float beat) {
-    if (!g_buffer) return;
-
-    int start_time_ms = (int)(((measure * BEATS_PER_MEASURE) + beat) * MS_PER_BEAT);
-    int duration_ms = (int)(duration_beats * MS_PER_BEAT);
-    // Match amplitude from original example (implicitly 3000)
-    int16_t amplitude = 3000;
-
-    // Use the existing addSineWave function
-    addSineWave(g_buffer, BUFFER_SIZE_SAMPLES, freq, duration_ms, start_time_ms, SAMPLE_RATE, amplitude);
-}
-
-// --- Chord Functions from Example ---
-// DMajor
-void DM(float duration, int measure, float beat) {
-  play(D4, duration, measure, beat);
-  play(Fs4, duration, measure, beat);
-  play(A4, duration, measure, beat);
-}
-
-// A Major 1st Inversion
-void AM1st(float duration, int measure, float beat) {
-  play(Cs4, duration, measure, beat);
-  play(E4, duration, measure, beat);
-  play(A4, duration, measure, beat);
-}
-
-// B Minor 1st Inversion
-void Bm1st(float duration, int measure, float beat) {
-  play(D4, duration, measure, beat);
-  play(Fs4, duration, measure, beat);
-  play(B4, duration, measure, beat);
-}
-
-// G Major 2nd Inversion
-void GM2nd(float duration, int measure, float beat) {
-  play(D4, duration, measure, beat);
-  play(G4, duration, measure, beat);
-  play(B4, duration, measure, beat);
-}
-
-
-// --- Main Test Driver ---
 int main() {
-    const int16_t bits_per_sample = DEFAULT_BITS_PER_SAMPLE;
-    const int16_t num_channels = DEFAULT_NUM_CHANNELS;
-    const char* output_filename = "test_output.wav";
+    printf("Testing DJcode sound generation...\n");
 
-    // Calculate buffer size in bytes
-    size_t buffer_bytes = BUFFER_SIZE_SAMPLES * (bits_per_sample / 8) * num_channels;
+    // Initialize WAV header
+    WavHeader header;
+    initWavHeader(&header, SAMPLE_RATE, BIT_DEPTH, DEFAULT_NUM_CHANNELS);
 
-    // Allocate buffer and initialize to zero
-    g_buffer = (short int*)malloc(buffer_bytes);
-    if (!g_buffer) {
+    // Calculate buffer size and allocate
+    size_t buffer_bytes = BUFFER_SIZE_SAMPLES * sizeof(int16_t);
+    int16_t *buffer = (int16_t*)malloc(buffer_bytes);
+    if (!buffer) {
         fprintf(stderr, "Error allocating buffer.\n");
         return 1;
     }
-    memset(g_buffer, 0, buffer_bytes); // Important to clear buffer for mixing
+    memset(buffer, 0, buffer_bytes);
 
-    // Initialize header
-    WavHeader header;
-    initWavHeader(&header, SAMPLE_RATE, bits_per_sample, num_channels);
+    printf("Generating test pattern with both musical chords and percussion...\n");
 
-    // --- Generate Chord Progression (from example) ---
-    printf("Generating chord progression...\n");
+    // First 4 measures: Musical chord progression with percussion
     int measure = 0;
-    while (measure < NUM_MEASURES_TO_PLAY) {
-        play(D2, 4, measure, 0); // Bass note
-        play(D3, 4, measure, 0); // Octave bass
-        DM(1, measure, 0);       // Chord on beat 0
-        DM(1, measure, 1);       // Chord on beat 1
-        DM(1, measure, 2);       // Chord on beat 2
-        DM(1, measure, 3);       // Chord on beat 3
+    while (measure < 4) {
+        // D Major with boom and tsst
+        play(buffer, BUFFER_SIZE_SAMPLES, D2, 4, measure, 0); // Bass
+        play(buffer, BUFFER_SIZE_SAMPLES, D3, 4, measure, 0); // Octave
+        DM(buffer, BUFFER_SIZE_SAMPLES, 1, measure, 0);
+        DM(buffer, BUFFER_SIZE_SAMPLES, 1, measure, 1);
+        DM(buffer, BUFFER_SIZE_SAMPLES, 1, measure, 2);
+        DM(buffer, BUFFER_SIZE_SAMPLES, 1, measure, 3);
+        generate_boom(buffer + (measure * 4 * SAMPLES_PER_BEAT), SAMPLES_PER_BEAT, BOOM_FREQ);
+        generate_tsst(buffer + ((measure * 4 + 1) * SAMPLES_PER_BEAT), SAMPLES_PER_BEAT, TSST_FREQ);
         measure++;
 
-        play(A2, 4, measure, 0); // Bass note
-        play(A3, 4, measure, 0); // Octave bass
-        AM1st(1, measure, 0);
-        AM1st(1, measure, 1);
-        AM1st(1, measure, 2);
-        AM1st(1, measure, 3);
+        // A Major with clap
+        play(buffer, BUFFER_SIZE_SAMPLES, A2, 4, measure, 0);
+        play(buffer, BUFFER_SIZE_SAMPLES, A3, 4, measure, 0);
+        AM1st(buffer, BUFFER_SIZE_SAMPLES, 1, measure, 0);
+        AM1st(buffer, BUFFER_SIZE_SAMPLES, 1, measure, 1);
+        AM1st(buffer, BUFFER_SIZE_SAMPLES, 1, measure, 2);
+        AM1st(buffer, BUFFER_SIZE_SAMPLES, 1, measure, 3);
+        generate_clap(buffer + ((measure * 4 + 2) * SAMPLES_PER_BEAT), SAMPLES_PER_BEAT, CLAP_FREQ);
         measure++;
 
-        play(B2, 4, measure, 0); // Bass note
-        play(B3, 4, measure, 0); // Octave bass
-        Bm1st(1, measure, 0);
-        Bm1st(1, measure, 1);
-        Bm1st(1, measure, 2);
-        Bm1st(1, measure, 3);
+        // B Minor with crash
+        play(buffer, BUFFER_SIZE_SAMPLES, B2, 4, measure, 0);
+        play(buffer, BUFFER_SIZE_SAMPLES, B3, 4, measure, 0);
+        Bm1st(buffer, BUFFER_SIZE_SAMPLES, 1, measure, 0);
+        Bm1st(buffer, BUFFER_SIZE_SAMPLES, 1, measure, 1);
+        Bm1st(buffer, BUFFER_SIZE_SAMPLES, 1, measure, 2);
+        Bm1st(buffer, BUFFER_SIZE_SAMPLES, 1, measure, 3);
+        generate_crash(buffer + ((measure * 4 + 3) * SAMPLES_PER_BEAT), SAMPLES_PER_BEAT);
         measure++;
 
-        play(G2, 4, measure, 0); // Bass note
-        play(G3, 4, measure, 0); // Octave bass
-        GM2nd(1, measure, 0);
-        GM2nd(1, measure, 1);
-        GM2nd(1, measure, 2);
-        GM2nd(1, measure, 3);
+        // G Major with triangle sounds
+        play(buffer, BUFFER_SIZE_SAMPLES, G2, 4, measure, 0);
+        play(buffer, BUFFER_SIZE_SAMPLES, G3, 4, measure, 0);
+        GM2nd(buffer, BUFFER_SIZE_SAMPLES, 1, measure, 0);
+        GM2nd(buffer, BUFFER_SIZE_SAMPLES, 1, measure, 1);
+        GM2nd(buffer, BUFFER_SIZE_SAMPLES, 1, measure, 2);
+        GM2nd(buffer, BUFFER_SIZE_SAMPLES, 1, measure, 3);
+        generate_ding(buffer + (measure * 4 * SAMPLES_PER_BEAT), SAMPLES_PER_BEAT, DING_FREQ);
+        generate_diding(buffer + ((measure * 4 + 2) * SAMPLES_PER_BEAT), SAMPLES_PER_BEAT, DING_FREQ);
         measure++;
     }
-    printf("Chord progression generated.\n");
 
-    // Write the file
+    // Last 4 measures: Drum and triangle pattern
+    for (int i = 0; i < 4; i++) {
+        int base_beat = (measure + i) * 4;
+        
+        // Basic drum pattern
+        generate_boom(buffer + ((base_beat + 0) * SAMPLES_PER_BEAT), SAMPLES_PER_BEAT, BOOM_FREQ);
+        generate_tsst(buffer + ((base_beat + 1) * SAMPLES_PER_BEAT), SAMPLES_PER_BEAT, TSST_FREQ);
+        generate_clap(buffer + ((base_beat + 2) * SAMPLES_PER_BEAT), SAMPLES_PER_BEAT, CLAP_FREQ);
+        
+        // Add triangle sounds on top
+        if (i % 2 == 0) {
+            generate_diding(buffer + ((base_beat + 3) * SAMPLES_PER_BEAT), SAMPLES_PER_BEAT, DING_FREQ);
+        } else {
+            generate_dididing(buffer + ((base_beat + 3) * SAMPLES_PER_BEAT), SAMPLES_PER_BEAT, DING_FREQ);
+        }
+    }
+
+    // Write the WAV file
+    const char* output_filename = "test_output.wav";
     printf("Writing WAV file: %s\n", output_filename);
-    size_t buffer_size_samples = BUFFER_SIZE_SAMPLES;
-    int result = writeWavFile(output_filename, &header, g_buffer, buffer_size_samples);
+    int result = writeWavFile(output_filename, &header, buffer, BUFFER_SIZE_SAMPLES);
 
     // Cleanup
-    free(g_buffer);
-    g_buffer = NULL; // Avoid dangling pointer use
+    free(buffer);
 
     if (result == 0) {
         printf("Successfully created %s\n", output_filename);
+        printf("Test pattern contains:\n");
+        printf("- Measures 0-3: Musical chord progression with percussion\n");
+        printf("  * D Major with boom/tsst\n");
+        printf("  * A Major with clap\n");
+        printf("  * B Minor with crash\n");
+        printf("  * G Major with triangle sounds\n");
+        printf("- Measures 4-7: Drum and triangle pattern\n");
+        printf("  * Basic drum pattern (boom, tsst, clap)\n");
+        printf("  * Alternating diding/dididing\n");
         return 0;
     } else {
         fprintf(stderr, "Failed to create WAV file (Error code: %d)\n", result);
