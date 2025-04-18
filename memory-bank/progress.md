@@ -5,7 +5,7 @@
 -   Initial Memory Bank structure created (`memory-bank/`).
 -   WAV Generator interface defined (`WAVGenerator.h`).
 -   Sound synthesis module created (`soundwaves.h/c`) with all required sounds:
-    * DRUM: BOOM, TSST, CLAP, CRASH, REST
+    * DRUM: BOOM, TSST, CLAP, CRASH, REST, DUN
     * TRIANGLE: DING, DIDING, DIDIDING
 -   Test pattern implemented in `WAVGenerator.c` to demonstrate all sounds.
 

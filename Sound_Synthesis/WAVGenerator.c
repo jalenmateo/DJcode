@@ -2,7 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h> // For M_PI and cos
+#include <math.h>   // For M_PI and cos
+#include <string.h> // For strcmp in sound mapping
+#include "soundwaves.h" // For sound generation functions and constants
+#include "tokensParser.h"     // For Pattern and PlayCommand structs
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -111,6 +114,37 @@ void addSineWave(short int *buffer, size_t buffer_size, float freq, int duration
 // void addTsss(...) { /* Generate hi-hat like sound (e.g., filtered noise) */ }
 // void addBang(...) { /* Generate snare-like sound */ }
 
+// --- Sound Name to Function Mapping ---
+
+// Define a type for the sound generation functions we'll be mapping to.
+// Note: This assumes a consistent signature. Functions like generate_crash
+// might need special handling if they don't take frequency.
+typedef void (*SoundFunc)(int16_t*, int, float);
+typedef void (*SoundFuncNoFreq)(int16_t*, int); // For sounds like crash, rest
+
+// Function to get the appropriate sound generation function based on name
+// Returns NULL if the name is not recognized.
+void* get_sound_function(const char* sound_name, float* frequency, int* requires_freq) {
+    *requires_freq = 1; // Assume frequency is needed by default
+
+    if (strcmp(sound_name, "BOOM") == 0) { *frequency = BOOM_FREQ; return generate_boom; }
+    if (strcmp(sound_name, "TSST") == 0) { *frequency = TSST_FREQ; return generate_tsst; }
+    if (strcmp(sound_name, "CLAP") == 0) { *frequency = CLAP_FREQ; return generate_clap; }
+    if (strcmp(sound_name, "DUN") == 0) { *frequency = BOOM_FREQ; return generate_floortom; } // Using BOOM_FREQ as base for floortom
+    if (strcmp(sound_name, "DING") == 0) { *frequency = DING_FREQ; return generate_ding; }
+    if (strcmp(sound_name, "DIDING") == 0) { *frequency = DING_FREQ; return generate_diding; }
+    if (strcmp(sound_name, "DIDIDING") == 0) { *frequency = DING_FREQ; return generate_dididing; }
+    // Sounds that don't require frequency
+    if (strcmp(sound_name, "CRASH") == 0) { *requires_freq = 0; return generate_crash; }
+    if (strcmp(sound_name, "REST") == 0) { *requires_freq = 0; return generate_rest; }
+
+    // Add other sounds here...
+
+    fprintf(stderr, "Warning: Unknown sound name '%s'\n", sound_name);
+    *requires_freq = 0;
+    return generate_rest; // Default to rest if unknown
+}
+
 
 int writeWavFile(const char *filename, WavHeader *header, const short int *buffer, size_t buffer_sample_count) {
     if (!filename || !header || !buffer || buffer_sample_count == 0) {
@@ -158,105 +192,128 @@ void mix_in(int16_t *dest, int16_t *src, int start, int length) {
 }
 
 
-// --- Temporary Main Function for Testing ---
-#ifdef WAV_GENERATOR_TEST_MAIN
+// --- Main Application Logic ---
 
-#include "soundwaves.h"
+int main(int argc, char *argv[]) {
+    printf("DJ Code WAV Generator\n");
 
-// Test pattern constants
-#define NUM_MEASURES 8  // 8 measures total
-#define BUFFER_SIZE_SAMPLES (NUM_MEASURES * BEATS_PER_MEASURE * SAMPLES_PER_BEAT)
+    const char* token_filename = "Sound_Synthesis/tokens.txt"; // hardcoded path for now but can change later on
+    const char* output_filename = "DJcode_Beats.wav";
 
-int main() {
-    printf("Testing DJcode sound generation with mixed layering...\n");
+    // --- 1. Parse the tokens file ---
+    Pattern patterns[MAX_PATTERNS];
+    PlayCommand play_sequence[MAX_PLAY_COMMANDS];
+    int num_patterns = 0;
+    int num_play_commands = 0;
 
-    WavHeader header;
-    initWavHeader(&header, SAMPLE_RATE, BIT_DEPTH, DEFAULT_NUM_CHANNELS);
+    printf("Parsing token file: %s\n", token_filename);
+    int parse_result = parse_tokens_file(token_filename, patterns, &num_patterns, play_sequence, &num_play_commands);
 
-    int16_t *buffer = (int16_t *)calloc(BUFFER_SIZE_SAMPLES, sizeof(int16_t));
-    if (!buffer) {
-        fprintf(stderr, "Buffer allocation failed\n");
+    if (parse_result != 0) {
+        fprintf(stderr, "Failed to parse token file (Error code: %d).\n", parse_result);
         return 1;
     }
+    printf("Parsed %d patterns and %d play commands.\n", num_patterns, num_play_commands);
 
-    int16_t temp[SAMPLES_PER_BEAT];
-    memset(temp, 0, sizeof(temp));
-
-    int measure = 0;
-
-    // --- Measures 0-3: Chord progression with some parallel percussion ---
-    for (; measure < 4; measure++) {
-        for (int beat = 0; beat < 4; beat++) {
-            int start = (measure * 4 + beat) * SAMPLES_PER_BEAT;
-
-            // Parallel sounds for first two beats
-            if (beat == 0 || beat == 1) {
-                memset(temp, 0, sizeof(temp));
-                generate_boom(temp, SAMPLES_PER_BEAT, BOOM_FREQ);
-                mix_in(buffer, temp, start, SAMPLES_PER_BEAT);
-
-                memset(temp, 0, sizeof(temp));
-                generate_floortom(temp, SAMPLES_PER_BEAT, TSST_FREQ);
-                mix_in(buffer, temp, start, SAMPLES_PER_BEAT);
-
-                memset(temp, 0, sizeof(temp));
-                generate_diding(temp, SAMPLES_PER_BEAT, DING_FREQ);
-                mix_in(buffer, temp, start, SAMPLES_PER_BEAT);
+    // --- 2. Calculate total audio length ---
+    long long total_beats = 0;
+    for (int i = 0; i < num_play_commands; i++) {
+        // Find the pattern corresponding to the play command
+        int pattern_found = 0;
+        for (int j = 0; j < num_patterns; j++) {
+            if (strcmp(play_sequence[i].pattern_name, patterns[j].name) == 0) {
+                total_beats += (long long)play_sequence[i].loop_count * patterns[j].num_sounds;
+                pattern_found = 1;
+                break;
             }
-
-            // Chord
-            DM(buffer, BUFFER_SIZE_SAMPLES, 1, measure, beat);
+        }
+        if (!pattern_found) {
+            fprintf(stderr, "Error: Pattern '%s' specified in PLAY command not found.\n", play_sequence[i].pattern_name);
+            return 1;
         }
     }
 
-    // --- Measures 4-5: Each sound isolated (serial style) ---
-    for (; measure < 6; measure++) {
-        for (int beat = 0; beat < 4; beat++) {
-            int start = (measure * 4 + beat) * SAMPLES_PER_BEAT;
-            memset(temp, 0, sizeof(temp));
+    if (total_beats == 0) {
+        printf("No beats to generate. Exiting.\n");
+        return 0;
+    }
 
-            switch (beat) {
-                case 0:
-                    generate_boom(temp, SAMPLES_PER_BEAT, BOOM_FREQ);
-                    break;
-                case 1:
-                    generate_clap(temp, SAMPLES_PER_BEAT, CLAP_FREQ);
-                    break;
-                case 2:
-                    generate_tsst(temp, SAMPLES_PER_BEAT, TSST_FREQ);
-                    break;
-                case 3:
-                    generate_dididing(temp, SAMPLES_PER_BEAT, DING_FREQ);
-                    break;
+    size_t total_samples = total_beats * SAMPLES_PER_BEAT;
+    printf("Total beats: %lld, Total samples: %zu\n", total_beats, total_samples);
+
+    // --- 3. Allocate buffer ---
+    int16_t *buffer = (int16_t *)calloc(total_samples, sizeof(int16_t));
+    if (!buffer) {
+        fprintf(stderr, "Buffer allocation failed for %zu samples.\n", total_samples);
+        return 1;
+    }
+    printf("Allocated buffer for %zu samples.\n", total_samples);
+
+    // --- 4. Generate Audio ---
+    printf("Generating audio...\n");
+    size_t current_sample_index = 0;
+    int16_t temp_buffer[SAMPLES_PER_BEAT]; // Buffer for a single beat
+
+    for (int i = 0; i < num_play_commands; i++) {
+        // Find the pattern
+        Pattern* current_pattern = NULL;
+        for (int j = 0; j < num_patterns; j++) {
+            if (strcmp(play_sequence[i].pattern_name, patterns[j].name) == 0) {
+                current_pattern = &patterns[j];
+                break;
             }
-            mix_in(buffer, temp, start, SAMPLES_PER_BEAT);
         }
-    }
+        // We already checked for missing patterns earlier, but double-check
+        if (!current_pattern) continue;
 
-    // --- Measures 6-7: Everything layered ---
-    for (; measure < 8; measure++) {
-        for (int beat = 0; beat < 4; beat++) {
-            int start = (measure * 4 + beat) * SAMPLES_PER_BEAT;
+        printf("Playing pattern '%s' %d times...\n", current_pattern->name, play_sequence[i].loop_count);
 
-            generate_boom(temp, SAMPLES_PER_BEAT, BOOM_FREQ);
-            mix_in(buffer, temp, start, SAMPLES_PER_BEAT);
+        for (int loop = 0; loop < play_sequence[i].loop_count; loop++) {
+            for (int sound_idx = 0; sound_idx < current_pattern->num_sounds; sound_idx++) {
+                const char* sound_name = current_pattern->sounds[sound_idx];
+                float frequency = 0;
+                int requires_freq = 0;
+                void* func_ptr = get_sound_function(sound_name, &frequency, &requires_freq);
 
-            generate_clap(temp, SAMPLES_PER_BEAT, CLAP_FREQ);
-            mix_in(buffer, temp, start, SAMPLES_PER_BEAT);
+                if (func_ptr) {
+                    memset(temp_buffer, 0, sizeof(temp_buffer)); // Clear temp buffer
 
-            generate_tsst(temp, SAMPLES_PER_BEAT, TSST_FREQ);
-            mix_in(buffer, temp, start, SAMPLES_PER_BEAT);
+                    if (requires_freq) {
+                        ((SoundFunc)func_ptr)(temp_buffer, SAMPLES_PER_BEAT, frequency);
+                    } else {
+                        ((SoundFuncNoFreq)func_ptr)(temp_buffer, SAMPLES_PER_BEAT);
+                    }
 
-            generate_diding(temp, SAMPLES_PER_BEAT, DING_FREQ);
-            mix_in(buffer, temp, start, SAMPLES_PER_BEAT);
+                    // Mix into the main buffer if within bounds
+                    if (current_sample_index < total_samples) {
+                         mix_in(buffer, temp_buffer, current_sample_index, SAMPLES_PER_BEAT);
+                    } else {
+                        fprintf(stderr, "Warning: Exceeded calculated buffer size during generation.\n");
+                        goto generation_end; // Exit loops if buffer overflow
+                    }
+                } else {
+                     // Function not found (already warned in get_sound_function), effectively a rest
+                     // No need to mix anything
+                }
 
-            GM2nd(buffer, BUFFER_SIZE_SAMPLES, 1, measure, beat);
-        }
-    }
+                current_sample_index += SAMPLES_PER_BEAT;
+            } // End sounds loop
+        } // End loops loop
+    } // End play commands loop
 
-    const char *output_filename = "djcode_parallel_mixed.wav";
-    printf("Writing: %s\n", output_filename);
-    int result = writeWavFile(output_filename, &header, buffer, BUFFER_SIZE_SAMPLES);
+generation_end:
+    printf("Audio generation complete.\n");
+
+    // --- 5. Write WAV file ---
+    WavHeader header;
+    // Use constants from soundwaves.h if available, otherwise define defaults
+    #ifndef DEFAULT_NUM_CHANNELS
+    #define DEFAULT_NUM_CHANNELS 1
+    #endif
+    initWavHeader(&header, SAMPLE_RATE, BIT_DEPTH, DEFAULT_NUM_CHANNELS);
+
+    printf("Writing WAV file: %s\n", output_filename);
+    int result = writeWavFile(output_filename, &header, buffer, total_samples);
 
     free(buffer);
 
@@ -264,8 +321,8 @@ int main() {
         printf("Successfully created %s\n", output_filename);
         return 0;
     } else {
-        fprintf(stderr, "Failed to write file\n");
+        fprintf(stderr, "Failed to write WAV file (Error code: %d).\n", result);
         return 1;
     }
 }
-#endif // WAV_GENERATOR_TEST_MAIN
+// #endif // WAV_GENERATOR_TEST_MAIN // Keep this commented out or remove if no longer needed
