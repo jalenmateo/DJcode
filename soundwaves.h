@@ -43,6 +43,7 @@ void generate_tsst(int16_t *buffer, int num_samples, float frequency);
 void generate_clap(int16_t *buffer, int num_samples, float frequency);
 void generate_crash(int16_t *buffer, int num_samples);
 void generate_rest(int16_t *buffer, int num_samples);
+void generate_floortom(int16_t *buffer, int num_samples, float base_freq);
 
 // Function declarations for triangle sounds
 void generate_ding(int16_t *buffer, int num_samples, float frequency);

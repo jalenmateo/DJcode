@@ -196,7 +196,7 @@ int main() {
                 mix_in(buffer, temp, start, SAMPLES_PER_BEAT);
 
                 memset(temp, 0, sizeof(temp));
-                generate_tsst(temp, SAMPLES_PER_BEAT, TSST_FREQ);
+                generate_floortom(temp, SAMPLES_PER_BEAT, TSST_FREQ);
                 mix_in(buffer, temp, start, SAMPLES_PER_BEAT);
 
                 memset(temp, 0, sizeof(temp));
