@@ -148,7 +148,7 @@ void generate_diding(int16_t *buffer, int num_samples, float frequency) {
 }
 
 void generate_dididing(int16_t *buffer, int num_samples, float frequency) {
-    int third_samples = num_samples / 3;
+    int third_samples = num_samples / 3; // Split the beat into 3. Basically allows for 3 dings in one stretch. An alternative can be to parallelize 3 dings into 2*buffer with 3 different start points.
     
     // First 'di'
     generate_ding(buffer, third_samples, frequency);
@@ -160,7 +160,7 @@ void generate_dididing(int16_t *buffer, int num_samples, float frequency) {
     generate_ding(buffer + (2 * third_samples), num_samples - (2 * third_samples), frequency);
 }
 
-// MUSICAL CHORD FUNCTIONS
+// MUSICAL CHORD FUNCTIONS. Not used for now but we can see if want to mix this in later on!
 
 void play(int16_t *buffer, size_t buffer_size, float freq, float duration, int measure, float beat) {
     float current_beat = BEATS_PER_MEASURE * measure + beat;

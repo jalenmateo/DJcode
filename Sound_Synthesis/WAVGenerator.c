@@ -2,36 +2,31 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>   // For M_PI and cos
-#include <string.h> // For strcmp in sound mapping
-#include "soundwaves.h" // For sound generation functions and constants
-#include "tokensParser.h"     // For Pattern and PlayCommand structs
+#include <math.h>   
+#include <string.h> 
+#include "soundwaves.h" 
+#include "tokensParser.h"     
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
-
-// --- Function Implementations ---
 
 void initWavHeader(WavHeader *header, int32_t sample_rate, int16_t bits_per_sample, int16_t num_channels) {
     if (!header) return;
 
-    // RIFF Chunk
+    // RIFF Chunk DO NOT CHANGE THIS
     strncpy(header->riff, "RIFF", 4);
-    // flength will be calculated later based on data size
+    // flength will be calculated later based on data size. DO NOT CHANGE
     strncpy(header->wave, "WAVE", 4);
 
-    // Format Chunk ("fmt ")
+    // Format Chunk ("fmt ") DO NOT CHANGE THIS
     strncpy(header->fmt, "fmt ", 4);
     header->chunk_size = 16; // Standard size for PCM
     header->format_tag = 1;  // PCM
-    header->num_chans = num_channels;
-    header->srate = sample_rate;
-    header->bits_per_samp = bits_per_sample;
+    header->num_chans = num_channels; // can change. 1 is mono 2 is stereo ...
+    header->srate = sample_rate; // can change
+    header->bits_per_samp = bits_per_sample; // can change
     header->bytes_per_samp = (bits_per_sample / 8) * num_channels;
     header->bytes_per_sec = sample_rate * header->bytes_per_samp;
 
-    // Data Chunk
+    // Data Chunk. 
     strncpy(header->data, "data", 4);
     // dlength will be calculated later based on data size
 
@@ -40,111 +35,23 @@ void initWavHeader(WavHeader *header, int32_t sample_rate, int16_t bits_per_samp
     header->dlength = 0;
 }
 
-void addSineWave(short int *buffer, size_t buffer_size, float freq, int duration_ms, int start_time_ms, int32_t sample_rate, int16_t amplitude) {
-    if (!buffer || freq <= 0 || duration_ms <= 0 || sample_rate <= 0 || amplitude <= 0) {
-        return; // Invalid parameters
-    }
-
-    // Calculate start and end indices in samples
-    size_t start_sample = (size_t)(((long long)start_time_ms * sample_rate) / 1000);
-    size_t duration_samples = (size_t)(((long long)duration_ms * sample_rate) / 1000);
-    size_t end_sample = start_sample + duration_samples;
-
-    // Ensure we don't write past the buffer
-    if (end_sample > buffer_size) {
-        end_sample = buffer_size;
-        // Optional: Log a warning or error here if truncation occurs
-    }
-    if (start_sample >= buffer_size) {
-        return; // Start time is beyond the buffer
-    }
-
-    for (size_t i = start_sample; i < end_sample; i++) {
-        // Calculate time within the note in samples
-        size_t sample_in_note = i - start_sample;
-
-        // Calculate percentage through the note for envelope shaping
-        float percent_through_note = (float)sample_in_note / duration_samples;
-        float amplitude_multiplier = 1.0f;
-
-        // Envelope logic exactly matching original example
-        if (percent_through_note < 0.25f)
-        {
-            amplitude_multiplier = (percent_through_note / 0.25f);
-        }
-        else if (percent_through_note < 0.5f)
-        {
-            // Original logic: (1 - ((percent_through_note - 0.25) / 0.25)) * 0.8 + 0.2;
-            // Simplified: (1 - (percent_through_note - 0.25) * 4) * 0.8 + 0.2
-            // Further simplified: (1 - 4*percent + 1) * 0.8 + 0.2
-            // Further simplified: (2 - 4*percent) * 0.8 + 0.2
-            // Further simplified: 1.6 - 3.2*percent + 0.2
-            // Further simplified: 1.8 - 3.2*percent
-            amplitude_multiplier = 1.8f - 3.2f * percent_through_note;
-        }
-        else
-        {
-            // Original logic: 1 - percent_through_note;
-            amplitude_multiplier = 1.0f - percent_through_note;
-        }
-
-        // Calculate the sample value using cosine wave
-        // Original used 'i' directly, assuming it represents time steps scaled by sample rate implicitly
-        // double time_in_seconds = (double)i / sample_rate; // This is technically correct but differs from original
-        // Match original calculation:
-        double value = cos((2.0 * M_PI * freq * i) / sample_rate);
-        // double value = cos(2.0 * M_PI * freq * time_in_seconds); // Removed duplicate/incorrect line
-
-        // Apply amplitude and envelope, then scale to 16-bit range
-        // Add to existing buffer value to allow mixing
-        int32_t current_val = buffer[i]; // Use 32-bit intermediate to prevent overflow
-        int32_t new_val = (int32_t)(value * amplitude * amplitude_multiplier);
-        int32_t mixed_val = current_val + new_val;
-
-        // Clamp to 16-bit range
-        if (mixed_val > 32767) mixed_val = 32767;
-        if (mixed_val < -32768) mixed_val = -32768;
-
-        buffer[i] = (short int)mixed_val;
-    }
-}
-
-// --- TODO: Implement specific sound functions ---
-// void addBoom(...) { /* Generate bass drum sound */ }
-// void addTsss(...) { /* Generate hi-hat like sound (e.g., filtered noise) */ }
-// void addBang(...) { /* Generate snare-like sound */ }
-
-// --- Sound Name to Function Mapping ---
-
-// Define a type for the sound generation functions we'll be mapping to.
-// Note: This assumes a consistent signature. Functions like generate_crash
-// might need special handling if they don't take frequency.
-typedef void (*SoundFunc)(int16_t*, int, float);
-typedef void (*SoundFuncNoFreq)(int16_t*, int); // For sounds like crash, rest
-
-// Function to get the appropriate sound generation function based on name
-// Returns NULL if the name is not recognized.
 void* get_sound_function(const char* sound_name, float* frequency, int* requires_freq) {
     *requires_freq = 1; // Assume frequency is needed by default
 
     if (strcmp(sound_name, "BOOM") == 0) { *frequency = BOOM_FREQ; return generate_boom; }
     if (strcmp(sound_name, "TSST") == 0) { *frequency = TSST_FREQ; return generate_tsst; }
     if (strcmp(sound_name, "CLAP") == 0) { *frequency = CLAP_FREQ; return generate_clap; }
-    if (strcmp(sound_name, "DUN") == 0) { *frequency = BOOM_FREQ; return generate_floortom; } // Using BOOM_FREQ as base for floortom
+    if (strcmp(sound_name, "DUN") == 0) { *frequency = BOOM_FREQ; return generate_floortom; } 
     if (strcmp(sound_name, "DING") == 0) { *frequency = DING_FREQ; return generate_ding; }
     if (strcmp(sound_name, "DIDING") == 0) { *frequency = DING_FREQ; return generate_diding; }
     if (strcmp(sound_name, "DIDIDING") == 0) { *frequency = DING_FREQ; return generate_dididing; }
-    // Sounds that don't require frequency
     if (strcmp(sound_name, "CRASH") == 0) { *requires_freq = 0; return generate_crash; }
     if (strcmp(sound_name, "REST") == 0) { *requires_freq = 0; return generate_rest; }
-
-    // Add other sounds here...
 
     fprintf(stderr, "Warning: Unknown sound name '%s'\n", sound_name);
     *requires_freq = 0;
     return generate_rest; // Default to rest if unknown
 }
-
 
 int writeWavFile(const char *filename, WavHeader *header, const short int *buffer, size_t buffer_sample_count) {
     if (!filename || !header || !buffer || buffer_sample_count == 0) {
@@ -157,7 +64,7 @@ int writeWavFile(const char *filename, WavHeader *header, const short int *buffe
         return -1;
     }
 
-    // Calculate final header values based on actual data
+    // Calculate final header dlength and flenght values based on actual data
     header->dlength = buffer_sample_count * header->bytes_per_samp;
     header->flength = header->dlength + sizeof(WavHeader) - 8; // -8 for RIFF and flength itself
 
@@ -181,7 +88,6 @@ int writeWavFile(const char *filename, WavHeader *header, const short int *buffe
     return 0; // Success
 }
 
-
 void mix_in(int16_t *dest, int16_t *src, int start, int length) {
     for (int i = 0; i < length; i++) {
         int32_t mixed = dest[start + i] + src[i];
@@ -192,7 +98,8 @@ void mix_in(int16_t *dest, int16_t *src, int start, int length) {
 }
 
 
-// --- Main Application Logic ---
+// TEMPORARY Main Application Logic FOR TESTING WITHOUT ALL THE PARSER FILES
+#ifdef WAV_GENERATOR_STANDALONE_MAIN
 
 int main(int argc, char *argv[]) {
     printf("DJ Code WAV Generator\n");
@@ -200,7 +107,7 @@ int main(int argc, char *argv[]) {
     const char* token_filename = "Sound_Synthesis/tokens.txt"; // hardcoded path for now but can change later on
     const char* output_filename = "DJcode_Beats.wav";
 
-    // --- 1. Parse the tokens file ---
+    // Parse the tokens file
     Pattern patterns[MAX_PATTERNS];
     PlayCommand play_sequence[MAX_PLAY_COMMANDS];
     int num_patterns = 0;
@@ -215,7 +122,7 @@ int main(int argc, char *argv[]) {
     }
     printf("Parsed %d patterns and %d play commands.\n", num_patterns, num_play_commands);
 
-    // --- 2. Calculate total audio length ---
+    // Calculate total audio length
     long long total_beats = 0;
     for (int i = 0; i < num_play_commands; i++) {
         // Find the pattern corresponding to the play command
@@ -241,7 +148,7 @@ int main(int argc, char *argv[]) {
     size_t total_samples = total_beats * SAMPLES_PER_BEAT;
     printf("Total beats: %lld, Total samples: %zu\n", total_beats, total_samples);
 
-    // --- 3. Allocate buffer ---
+    // Allocate buffer
     int16_t *buffer = (int16_t *)calloc(total_samples, sizeof(int16_t));
     if (!buffer) {
         fprintf(stderr, "Buffer allocation failed for %zu samples.\n", total_samples);
@@ -249,7 +156,7 @@ int main(int argc, char *argv[]) {
     }
     printf("Allocated buffer for %zu samples.\n", total_samples);
 
-    // --- 4. Generate Audio ---
+    // Generate Audio
     printf("Generating audio...\n");
     size_t current_sample_index = 0;
     int16_t temp_buffer[SAMPLES_PER_BEAT]; // Buffer for a single beat
@@ -304,7 +211,7 @@ int main(int argc, char *argv[]) {
 generation_end:
     printf("Audio generation complete.\n");
 
-    // --- 5. Write WAV file ---
+    // Write WAV file
     WavHeader header;
     // Use constants from soundwaves.h if available, otherwise define defaults
     #ifndef DEFAULT_NUM_CHANNELS
@@ -325,4 +232,4 @@ generation_end:
         return 1;
     }
 }
-// #endif // WAV_GENERATOR_TEST_MAIN // Keep this commented out or remove if no longer needed
+#endif
