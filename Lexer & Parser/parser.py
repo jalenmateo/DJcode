@@ -9,19 +9,20 @@ VALID_SOUNDS = {
 
 def parse_program(lines):
     i = 0
-    i = parse_pattern_block(lines, i)
+    defined_patterns = set()
+    i = parse_pattern_block(lines, i,defined_patterns)
     if i < len(lines) and lines[i] == "MAIN":
-        i = parse_main_block(lines, i)
+        i = parse_main_block(lines, i,defined_patterns)
     if i < len(lines):
         raise SyntaxError(f"Unexpected token at end: {lines[i]}")
     print("✅ DJcode parsed successfully.")
 
-def parse_pattern_block(lines, i):
+def parse_pattern_block(lines, i,defined_patterns):
     while i < len(lines) and lines[i]!="MAIN":
-        i = parse_named_pattern(lines, i)
+        i = parse_named_pattern(lines, i,defined_patterns)
     return i
 
-def parse_named_pattern(lines, i):
+def parse_named_pattern(lines, i,defined_patterns):
     if not lines[i].startswith("PATTERN"):
         raise SyntaxError("Expected PATTERN")
     print(f"{lines[i]}")
@@ -30,6 +31,9 @@ def parse_named_pattern(lines, i):
     if i >= len(lines) or not lines[i].startswith("NUMBER"):
         raise SyntaxError("Expected NUMBER")
     print(f"{lines[i]}")
+    pattern_number = lines[i].split()[1]  # we just passed NUMBER line
+    defined_patterns.add(pattern_number)
+
     i += 1
 
     if i >= len(lines) or lines[i] != "COLON":
@@ -64,7 +68,7 @@ def parse_instrument_sound_group(lines, i, instr_name):
         i += 1
 
     return i
-def parse_main_block(lines,i):
+def parse_main_block(lines,i,defined_patterns):
     if lines[i]!= "MAIN":
         raise SyntaxError("Expected MAIN")
     print("MAIN")
@@ -85,7 +89,10 @@ def parse_main_block(lines,i):
         i+=1
         if i>=len(lines) or not lines[i].startswith("NUMBER"):
             raise SyntaxError("Expected NUMBER after PATTERN")
-        print(f"NUMBER {lines[i].split()[1]}")
+        pattern_number = lines[i].split()[1]
+        print(f"NUMBER {pattern_number}")
+        if pattern_number not in defined_patterns:
+            raise SyntaxError(f"❌ Pattern {pattern_number} used in MAIN but not defined earlier")
         i+=1
         if i>=len(lines) or lines[i]!= "LOOP":
             raise SyntaxError("Expected LOOP")
