@@ -1,21 +1,23 @@
-tokens = ['PATTERN', 'NUMBER', 'COLON', 'INSTRUMENT', 'INSTRUMENT_SOUND']
+tokens = ['PATTERN', 'NUMBER', 'COLON', 'INSTRUMENT', 'INSTRUMENT_SOUND', 'MAIN', 'PLAY', 'LOOP']
 
 
 VALID_SOUNDS = {
-    "Drum": {"boom", "clap"},
-    "Triangle": {"ting"}
+    "Drum": {"boom", "clap", "tsst", "crash", "rest", "dun"},
+    "Triangle": {"ding", "diding", "dididing"}
 }
 
 
 def parse_program(lines):
     i = 0
     i = parse_pattern_block(lines, i)
+    if i < len(lines) and lines[i] == "MAIN":
+        i = parse_main_block(lines, i)
     if i < len(lines):
         raise SyntaxError(f"Unexpected token at end: {lines[i]}")
     print("✅ DJcode parsed successfully.")
 
 def parse_pattern_block(lines, i):
-    while i < len(lines):
+    while i < len(lines) and lines[i]!="MAIN":
         i = parse_named_pattern(lines, i)
     return i
 
@@ -62,7 +64,39 @@ def parse_instrument_sound_group(lines, i, instr_name):
         i += 1
 
     return i
+def parse_main_block(lines,i):
+    if lines[i]!= "MAIN":
+        raise SyntaxError("Expected MAIN")
+    print("MAIN")
+    i+=1
 
+    if i>= len(lines) or lines[i]!= "COLON":
+        raise SyntaxError("Expected COLON after MAIN")
+    print ("COLON")
+    i+=1
+    while i<len(lines):
+        if lines[i]!= "PLAY":
+            raise SyntaxError("Expected PLAY after COLON")
+        print("PLAY")
+        i+=1
+        if i>= len(lines) or lines[i]!= "PATTERN":
+            raise SyntaxError("Expected PATTERN after PLAY")
+        print("PATTERN")
+        i+=1
+        if i>=len(lines) or not lines[i].startswith("NUMBER"):
+            raise SyntaxError("Expected NUMBER after PATTERN")
+        print(f"NUMBER {lines[i].split()[1]}")
+        i+=1
+        if i>=len(lines) or lines[i]!= "LOOP":
+            raise SyntaxError("Expected LOOP")
+        print("LOOP")
+        i+=1
+        if i>=len(lines) or not lines[i].startswith("NUMBER"):
+            raise SyntaxError("Expected NUMBER after PATTERN")
+        print(f"NUMBER {lines[i].split()[1]}")
+        i+=1
+
+    return i    
 if __name__ == "__main__":
     with open("tokens.txt") as f:
         lines = [line.strip() for line in f if line.strip()]  # removes blanks

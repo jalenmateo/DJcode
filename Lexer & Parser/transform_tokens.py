@@ -1,5 +1,5 @@
 input_file = "tokens.txt"
-output_file = "formatted_patterns.txt"
+output_file = "formatted_tokens.txt"
 
 with open(input_file, "r") as f:
     lines = [line.strip() for line in f if line.strip()]  # strip and skip empty lines
