@@ -75,7 +75,7 @@ void generate_clap(int16_t *buffer, int num_samples, float frequency) {
     for (int i = 0; i < num_samples; i++) {
         float sample = white_noise();
         // Simple band-pass simulation by mixing noise with a sine wave
-        sample = (sample * 0.7f + sine_wave(TWO_PI * frequency * i / SAMPLE_RATE) * 0.3f);
+        sample = (sample * 0.5f + sine_wave(TWO_PI * frequency * i / SAMPLE_RATE) * 0.5f);
         sample = apply_decay(sample, i, num_samples, decay_factor);
         buffer[i] = (int16_t)(sample * MAX_AMPLITUDE * 0.8f);
     }
@@ -94,6 +94,31 @@ void generate_crash(int16_t *buffer, int num_samples) {
 void generate_rest(int16_t *buffer, int num_samples) {
     for (int i = 0; i < num_samples; i++) {
         buffer[i] = 0;
+    }
+}
+
+void generate_floortom(int16_t *buffer, int num_samples, float base_freq) {
+    float phase1 = 0.0f;
+    float phase2 = 0.0f;
+
+    float phase_step1 = TWO_PI * base_freq / SAMPLE_RATE;
+    float phase_step2 = TWO_PI * base_freq * 1.5f / SAMPLE_RATE;
+
+    float decay_factor = 0.002f;
+
+    for (int i = 0; i < num_samples; i++) {
+        float t = (float)i / num_samples;
+        float s1 = sine_wave(phase1);
+        float s2 = triangle_wave(phase2);
+        float noise = white_noise();
+
+        float sample = (s1 * 0.7f + s2 * 0.2f + noise * 0.1f);
+        sample = apply_decay(sample, i, num_samples, decay_factor);
+
+        buffer[i] = (int16_t)(sample * MAX_AMPLITUDE);
+
+        phase1 += phase_step1;
+        phase2 += phase_step2;
     }
 }
 
@@ -123,7 +148,7 @@ void generate_diding(int16_t *buffer, int num_samples, float frequency) {
 }
 
 void generate_dididing(int16_t *buffer, int num_samples, float frequency) {
-    int third_samples = num_samples / 3;
+    int third_samples = num_samples / 3; // Split the beat into 3. Basically allows for 3 dings in one stretch. An alternative can be to parallelize 3 dings into 2*buffer with 3 different start points.
     
     // First 'di'
     generate_ding(buffer, third_samples, frequency);
@@ -135,7 +160,7 @@ void generate_dididing(int16_t *buffer, int num_samples, float frequency) {
     generate_ding(buffer + (2 * third_samples), num_samples - (2 * third_samples), frequency);
 }
 
-// MUSICAL CHORD FUNCTIONS
+// MUSICAL CHORD FUNCTIONS. Not used for now but we can see if want to mix this in later on!
 
 void play(int16_t *buffer, size_t buffer_size, float freq, float duration, int measure, float beat) {
     float current_beat = BEATS_PER_MEASURE * measure + beat;

@@ -8,7 +8,7 @@
 -   Created `soundwaves.h` and `soundwaves.c` for dedicated sound synthesis.
 -   Defined constants for sample rate (44100 Hz), bit depth (16-bit), and frequencies.
 -   Implemented synthesis functions for all required sounds:
-    * DRUM sounds: BOOM, TSST, CLAP, CRASH, REST
+    * DRUM sounds: BOOM, TSST, CLAP, CRASH, REST, DUN (formerly FLOORTOM)
     * TRIANGLE sounds: DING, DIDING, DIDIDING
 -   Updated `WAVGenerator.c` with new test pattern to demonstrate all sounds.
 -   Updated system patterns documentation to reflect new components.

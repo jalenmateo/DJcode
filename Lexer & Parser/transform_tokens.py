@@ -22,7 +22,7 @@ while i < len(lines):
             output.append("END\n")
             current_pattern = None
             sounds = []
-        output.append("MAIN")
+        #output.append("MAIN")
         in_main = True
         i += 1
         continue

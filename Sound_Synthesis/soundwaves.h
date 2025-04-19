@@ -14,7 +14,7 @@
 #define MS_PER_BEAT 500
 #define SAMPLES_PER_BEAT ((SAMPLE_RATE * MS_PER_BEAT) / 1000)
 
-// Musical note frequencies (https://pages.mtu.edu/~suits/notefreqs.html)
+// Musical note frequencies
 #define D2 73.42f
 #define G2 98.00f
 #define A2 110.00f
@@ -31,7 +31,7 @@
 #define A4 440.00f
 #define B4 493.88f
 
-// Frequency constants for various sounds
+// Frequency constants for various sounds. Feel free to change by ear haha.
 #define BOOM_FREQ 70.0f      // Low kick drum frequency
 #define TSST_FREQ 7000.0f    // High-hat frequency center
 #define CLAP_FREQ 2500.0f    // Hand clap frequency center
@@ -43,13 +43,14 @@ void generate_tsst(int16_t *buffer, int num_samples, float frequency);
 void generate_clap(int16_t *buffer, int num_samples, float frequency);
 void generate_crash(int16_t *buffer, int num_samples);
 void generate_rest(int16_t *buffer, int num_samples);
+void generate_floortom(int16_t *buffer, int num_samples, float base_freq);
 
 // Function declarations for triangle sounds
 void generate_ding(int16_t *buffer, int num_samples, float frequency);
 void generate_diding(int16_t *buffer, int num_samples, float frequency);
 void generate_dididing(int16_t *buffer, int num_samples, float frequency);
 
-// Function declarations for musical chord progression
+// Function declarations for musical chord progression. Added these so we can play around with sounds other than drum and triangle. See if we want to use/mix these.
 void play(int16_t *buffer, size_t buffer_size, float freq, float duration, int measure, float beat);
 void DM(int16_t *buffer, size_t buffer_size, float duration, int measure, float beat);
 void AM1st(int16_t *buffer, size_t buffer_size, float duration, int measure, float beat);

@@ -11,6 +11,4 @@ TING
 TING
 END
 
-MAIN
 PLAY pattern1 LOOP 2
-LOOP 2
