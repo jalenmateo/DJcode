@@ -96,8 +96,8 @@ Available sounds:
 
 ### Running the Complete Pipeline
 
-1. Create your .dj file (e.g., `test.dj`)
-2. Run the complete pipeline:
+1. Create your .dj file (e.g., `test.dj`) 
+2. Run the complete pipeline:  -----  Change the following line in the makefile if your DJCODE name or path is changed "DJCODE_INPUT = $(LEXER_DIR)/test.dj"
    ```bash
    make all
    ```
