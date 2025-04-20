@@ -12,3 +12,4 @@ DIDING
 END
 
 PLAY pattern1 LOOP 2
+PLAY pattern2 LOOP 3

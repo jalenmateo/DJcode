@@ -104,7 +104,7 @@ void mix_in(int16_t *dest, int16_t *src, int start, int length) {
 int main(int argc, char *argv[]) {
     printf("DJ Code WAV Generator\n");
 
-    const char* token_filename = "Sound_Synthesis/tokens.txt"; // hardcoded path for now but can change later on
+    const char* token_filename = "../Lexer_Parser/formatted_tokens.txt"; // hardcoded path for now but can change later on
     const char* output_filename = "DJcode_Beats.wav";
 
     // Parse the tokens file
