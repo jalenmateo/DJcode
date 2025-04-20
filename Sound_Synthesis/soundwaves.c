@@ -1,35 +1,45 @@
 #include "soundwaves.h"
-#include <math.h>
 #include <stdlib.h>
+#include <math.h>
 
-// Math constants
+#define sinf(x) ((float)sin((double)(x)))
+#define powf(x,y) ((float)pow((double)(x),(double)(y)))
+#define fmodf(x,y) ((float)fmod((double)(x),(double)(y)))
+#define fabsf(x) ((float)fabs((double)(x)))
+#define floorf(x) ((float)floor((double)(x)))
+
+/* Math constants*/
 #define PI 3.14159265358979323846
 #define TWO_PI (2.0 * PI)
 
-// Helper function to generate a sine wave sample
+/* Helper function to generate a sine wave sample*/
 static float sine_wave(float phase) {
     return sinf(phase);
 }
 
-// Helper function to generate a triangle wave sample
+/* Helper function to generate a triangle wave sample*/
 static float triangle_wave(float phase) {
-    float normalized_phase = fmodf(phase, TWO_PI) / TWO_PI;
+    float normalized_phase;
+    normalized_phase = fmodf(phase, TWO_PI) / TWO_PI;
     return 2.0f * fabsf(2.0f * (normalized_phase - floorf(normalized_phase + 0.5f))) - 1.0f;
 }
 
-// Helper function to generate white noise
+/* Helper function to generate white noise*/
 static float white_noise() {
     return (float)rand() / RAND_MAX * 2.0f - 1.0f;
 }
 
-// Helper function to apply exponential decay envelope
+/* Helper function to apply exponential decay envelope*/
 static float apply_decay(float sample, int current_sample, int total_samples, float decay_factor) {
     return sample * powf(decay_factor, (float)current_sample / total_samples);
 }
 
-// Helper function to apply musical note envelope
+/* Helper function to apply musical note envelope - currently unused but kept for future use */
+static float apply_note_envelope(float sample, float percent_through_note) __attribute__((unused));
 static float apply_note_envelope(float sample, float percent_through_note) {
-    float amplitude_multiplier = 1.0f;
+    float amplitude_multiplier;
+    
+    amplitude_multiplier = 1.0f;
     
     if (percent_through_note < 0.25f) {
         amplitude_multiplier = (percent_through_note / 0.25f);
@@ -44,15 +54,21 @@ static float apply_note_envelope(float sample, float percent_through_note) {
     return sample * amplitude_multiplier;
 }
 
-// DRUM SOUNDS
+/* DRUM SOUNDS*/
 
 void generate_boom(int16_t *buffer, int num_samples, float frequency) {
-    float phase = 0.0f;
-    float phase_step = TWO_PI * frequency / SAMPLE_RATE;
-    float decay_factor = 0.001f; // Fast decay for kick drum
+    float phase;
+    float phase_step;
+    float decay_factor;
+    float sample;
+    int i;
     
-    for (int i = 0; i < num_samples; i++) {
-        float sample = sine_wave(phase);
+    phase = 0.0f;
+    phase_step = TWO_PI * frequency / SAMPLE_RATE;
+    decay_factor = 0.001f; /* Fast decay for kick drum*/
+    
+    for (i = 0; i < num_samples; i++) {
+        sample = sine_wave(phase);
         sample = apply_decay(sample, i, num_samples, decay_factor);
         buffer[i] = (int16_t)(sample * MAX_AMPLITUDE);
         phase += phase_step;
@@ -60,21 +76,29 @@ void generate_boom(int16_t *buffer, int num_samples, float frequency) {
 }
 
 void generate_tsst(int16_t *buffer, int num_samples, float frequency) {
-    float decay_factor = 0.0001f; // Very fast decay for hi-hat
+    float decay_factor;
+    float sample;
+    int i;
     
-    for (int i = 0; i < num_samples; i++) {
-        float sample = white_noise();
+    decay_factor = 0.0001f; /* Very fast decay for hi-hat*/
+    
+    for (i = 0; i < num_samples; i++) {
+        sample = white_noise();
         sample = apply_decay(sample, i, num_samples, decay_factor);
-        buffer[i] = (int16_t)(sample * MAX_AMPLITUDE * 0.7f); // Slightly reduced amplitude for high frequencies
+        buffer[i] = (int16_t)(sample * MAX_AMPLITUDE * 0.7f); /* Slightly reduced amplitude for high frequencies*/
     }
 }
 
 void generate_clap(int16_t *buffer, int num_samples, float frequency) {
-    float decay_factor = 0.01f; // Slower decay for clap reverb
+    float decay_factor;
+    float sample;
+    int i;
     
-    for (int i = 0; i < num_samples; i++) {
-        float sample = white_noise();
-        // Simple band-pass simulation by mixing noise with a sine wave
+    decay_factor = 0.01f; /* Slower decay for clap reverb*/
+    
+    for (i = 0; i < num_samples; i++) {
+        sample = white_noise();
+        /* Simple band-pass simulation by mixing noise with a sine wave*/
         sample = (sample * 0.5f + sine_wave(TWO_PI * frequency * i / SAMPLE_RATE) * 0.5f);
         sample = apply_decay(sample, i, num_samples, decay_factor);
         buffer[i] = (int16_t)(sample * MAX_AMPLITUDE * 0.8f);
@@ -82,37 +106,51 @@ void generate_clap(int16_t *buffer, int num_samples, float frequency) {
 }
 
 void generate_crash(int16_t *buffer, int num_samples) {
-    float decay_factor = 0.05f; // Slow decay for crash
+    float decay_factor;
+    float sample;
+    int i;
     
-    for (int i = 0; i < num_samples; i++) {
-        float sample = white_noise();
+    decay_factor = 0.05f; /* Slow decay for crash*/
+    
+    for (i = 0; i < num_samples; i++) {
+        sample = white_noise();
         sample = apply_decay(sample, i, num_samples, decay_factor);
         buffer[i] = (int16_t)(sample * MAX_AMPLITUDE * 0.6f);
     }
 }
 
 void generate_rest(int16_t *buffer, int num_samples) {
-    for (int i = 0; i < num_samples; i++) {
+    int i;
+    
+    for (i = 0; i < num_samples; i++) {
         buffer[i] = 0;
     }
 }
 
 void generate_floortom(int16_t *buffer, int num_samples, float base_freq) {
-    float phase1 = 0.0f;
-    float phase2 = 0.0f;
+    float phase1;
+    float phase2;
+    float phase_step1;
+    float phase_step2;
+    float decay_factor;
+    float s1;
+    float s2;
+    float noise;
+    float sample;
+    int i;
 
-    float phase_step1 = TWO_PI * base_freq / SAMPLE_RATE;
-    float phase_step2 = TWO_PI * base_freq * 1.5f / SAMPLE_RATE;
+    phase1 = 0.0f;
+    phase2 = 0.0f;
+    phase_step1 = TWO_PI * base_freq / SAMPLE_RATE;
+    phase_step2 = TWO_PI * base_freq * 1.5f / SAMPLE_RATE;
+    decay_factor = 0.002f;
 
-    float decay_factor = 0.002f;
+    for (i = 0; i < num_samples; i++) {
+        s1 = sine_wave(phase1);
+        s2 = triangle_wave(phase2);
+        noise = white_noise();
 
-    for (int i = 0; i < num_samples; i++) {
-        float t = (float)i / num_samples;
-        float s1 = sine_wave(phase1);
-        float s2 = triangle_wave(phase2);
-        float noise = white_noise();
-
-        float sample = (s1 * 0.7f + s2 * 0.2f + noise * 0.1f);
+        sample = (s1 * 0.7f + s2 * 0.2f + noise * 0.1f);
         sample = apply_decay(sample, i, num_samples, decay_factor);
 
         buffer[i] = (int16_t)(sample * MAX_AMPLITUDE);
@@ -122,15 +160,21 @@ void generate_floortom(int16_t *buffer, int num_samples, float base_freq) {
     }
 }
 
-// TRIANGLE SOUNDS
+/* TRIANGLE SOUNDS*/
 
 void generate_ding(int16_t *buffer, int num_samples, float frequency) {
-    float phase = 0.0f;
-    float phase_step = TWO_PI * frequency / SAMPLE_RATE;
-    float decay_factor = 0.01f;
+    float phase;
+    float phase_step;
+    float decay_factor;
+    float sample;
+    int i;
     
-    for (int i = 0; i < num_samples; i++) {
-        float sample = triangle_wave(phase);
+    phase = 0.0f;
+    phase_step = TWO_PI * frequency / SAMPLE_RATE;
+    decay_factor = 0.01f;
+    
+    for (i = 0; i < num_samples; i++) {
+        sample = triangle_wave(phase);
         sample = apply_decay(sample, i, num_samples, decay_factor);
         buffer[i] = (int16_t)(sample * MAX_AMPLITUDE);
         phase += phase_step;
@@ -138,82 +182,30 @@ void generate_ding(int16_t *buffer, int num_samples, float frequency) {
 }
 
 void generate_diding(int16_t *buffer, int num_samples, float frequency) {
-    int half_samples = num_samples / 2;
+    int half_samples;
     
-    // First 'di'
+    half_samples = num_samples / 2;
+    
+    /* First 'di'*/
     generate_ding(buffer, half_samples, frequency);
     
-    // Second 'ding' (slightly higher pitch)
+    /* Second 'ding' (slightly higher pitch)*/
     generate_ding(buffer + half_samples, num_samples - half_samples, frequency * 1.1f);
 }
 
 void generate_dididing(int16_t *buffer, int num_samples, float frequency) {
-    int third_samples = num_samples / 3; // Split the beat into 3. Basically allows for 3 dings in one stretch. An alternative can be to parallelize 3 dings into 2*buffer with 3 different start points.
+    int third_samples;
     
-    // First 'di'
+    /* Split the beat into 3. Basically allows for 3 dings in one stretch. 
+       An alternative can be to parallelize 3 dings into 2*buffer with 3 different start points.*/
+    third_samples = num_samples / 3;
+    
+    /* First 'di'*/
     generate_ding(buffer, third_samples, frequency);
     
-    // Second 'di' (slightly higher pitch)
+    /* Second 'di' (slightly higher pitch)*/
     generate_ding(buffer + third_samples, third_samples, frequency * 1.1f);
     
-    // Final 'ding' (back to original pitch)
+    /* Final 'ding' (back to original pitch)*/
     generate_ding(buffer + (2 * third_samples), num_samples - (2 * third_samples), frequency);
-}
-
-// MUSICAL CHORD FUNCTIONS. Not used for now but we can see if want to mix this in later on!
-
-void play(int16_t *buffer, size_t buffer_size, float freq, float duration, int measure, float beat) {
-    float current_beat = BEATS_PER_MEASURE * measure + beat;
-    int start_index = (int)(current_beat * SAMPLES_PER_BEAT);
-    int num_samples = (int)(duration * SAMPLES_PER_BEAT);
-    int end_index = start_index + num_samples;
-    
-    if (end_index > buffer_size) {
-        end_index = buffer_size;
-    }
-    
-    float phase = 0.0f;
-    float phase_step = TWO_PI * freq / SAMPLE_RATE;
-    
-    for (int i = start_index; i < end_index; i++) {
-        float percent_through_note = (float)(i - start_index) / num_samples;
-        float sample = sine_wave(phase);
-        sample = apply_note_envelope(sample, percent_through_note);
-        
-        // Mix with existing buffer content
-        int32_t current_val = buffer[i];
-        int32_t new_val = (int32_t)(sample * 3000); // Original amplitude from example
-        int32_t mixed_val = current_val + new_val;
-        
-        // Clamp to 16-bit range
-        if (mixed_val > 32767) mixed_val = 32767;
-        if (mixed_val < -32768) mixed_val = -32768;
-        
-        buffer[i] = (int16_t)mixed_val;
-        phase += phase_step;
-    }
-}
-
-void DM(int16_t *buffer, size_t buffer_size, float duration, int measure, float beat) {
-    play(buffer, buffer_size, D4, duration, measure, beat);
-    play(buffer, buffer_size, Fs4, duration, measure, beat);
-    play(buffer, buffer_size, A4, duration, measure, beat);
-}
-
-void AM1st(int16_t *buffer, size_t buffer_size, float duration, int measure, float beat) {
-    play(buffer, buffer_size, Cs4, duration, measure, beat);
-    play(buffer, buffer_size, E4, duration, measure, beat);
-    play(buffer, buffer_size, A4, duration, measure, beat);
-}
-
-void Bm1st(int16_t *buffer, size_t buffer_size, float duration, int measure, float beat) {
-    play(buffer, buffer_size, D4, duration, measure, beat);
-    play(buffer, buffer_size, Fs4, duration, measure, beat);
-    play(buffer, buffer_size, B4, duration, measure, beat);
-}
-
-void GM2nd(int16_t *buffer, size_t buffer_size, float duration, int measure, float beat) {
-    play(buffer, buffer_size, D4, duration, measure, beat);
-    play(buffer, buffer_size, G4, duration, measure, beat);
-    play(buffer, buffer_size, B4, duration, measure, beat);
 }

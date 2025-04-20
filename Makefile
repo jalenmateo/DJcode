@@ -25,17 +25,17 @@ parse:
 $(LEXER_DIR)/lex.yy.c: $(LEXER_DIR)/lexer.l
 	cd $(LEXER_DIR) && flex lexer.l
 
-# Build the test_dj_generator binary
+# Build the dj_generator binary
 soundgen: transform
 	@echo "Building sound generator..."
 	$(CC) $(SOUND_DIR)/WAVGenerator.c \
 	      $(SOUND_DIR)/tokensParser.c \
 	      $(SOUND_DIR)/soundwaves.c \
-	      -o $(SOUND_DIR)/test_dj_generator \
-	      -DWAV_GENERATOR_STANDALONE_MAIN -lm
-	@echo "Running test_dj_generator..."
+	      -o $(SOUND_DIR)/dj_generator \
+	      -DWAV_GENERATOR_STANDALONE_MAIN -lm -Wall -ansi -Werror -pedantic
+	@echo "Running dj_generator..."
 
-	cd $(SOUND_DIR) && ./test_dj_generator
+	cd $(SOUND_DIR) && ./dj_generator
 
 # Clean build files
 clean:
