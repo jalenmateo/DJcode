@@ -1,7 +1,9 @@
 %{
+#define YY_NO_UNISTD_H 1
+#define isatty(x) 0  
 #include <stdio.h>
 %}
-
+%option noinput nounput
 %%
 
 "Pattern"              { printf("PATTERN\n"); }
