@@ -11,7 +11,7 @@ all: lexer transform parse soundgen
 
 # Step 1: Compile lexer (lexer.l + main.c)
 lexer: $(LEXER_DIR)/lex.yy.c $(LEXER_DIR)/main.c
-	gcc -o $(LEXER_DIR)/lexer $(LEXER_DIR)/lex.yy.c $(LEXER_DIR)/main.c
+	gcc -o $(LEXER_DIR)/lexer $(LEXER_DIR)/lex.yy.c $(LEXER_DIR)/main.c -lm -Wall -ansi -Werror -pedantic
 
 # Step 2: Run lexer on DJcode input file to generate tokens.txt
 transform: lexer
