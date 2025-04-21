@@ -30,7 +30,7 @@ $(LEXER_DIR)$(SLASH)lex.yy.c: $(LEXER_DIR)$(SLASH)lexer.l
 
 # Step 2: Compile lexer (lexer.l + main.c)
 lexer: $(LEXER_DIR)$(SLASH)lex.yy.c $(LEXER_DIR)$(SLASH)main.c
-	gcc -o $(LEXER) $(LEXER_DIR)$(SLASH)lex.yy.c $(LEXER_DIR)$(SLASH)main.c
+	gcc -o $(LEXER) $(LEXER_DIR)$(SLASH)lex.yy.c $(LEXER_DIR)$(SLASH)main.c -Wall -ansi -Werror -pedantic
 
 # Step 3: Run lexer to generate tokens.txt
 transform: lexer
@@ -50,8 +50,11 @@ soundgen:
 		-o $(SOUND_DIR)$(SLASH)$(GENERATOR) \
 		-DWAV_GENERATOR_STANDALONE_MAIN -lm -Wall -ansi -Werror -pedantic
 	@echo "Running sound generator..."
+ifeq ($(OS),Windows_NT)
+	cmd /C "cd $(SOUND_DIR) && $(GENERATOR)"
+else
 	cd $(SOUND_DIR) && ./$(GENERATOR)
-
+endif
 # Clean generated files
 clean:
 	$(DEL) $(LEXER) $(LEXER_DIR)$(SLASH)lex.yy.c $(TOKENS_OUTPUT) output.wav $(SOUND_DIR)$(SLASH)$(GENERATOR)
