@@ -25,7 +25,7 @@ static float triangle_wave(float phase) {
 }
 
 /* Helper function to generate white noise*/
-static float white_noise() {
+static float white_noise(void) {
     return (float)rand() / RAND_MAX * 2.0f - 1.0f;
 }
 

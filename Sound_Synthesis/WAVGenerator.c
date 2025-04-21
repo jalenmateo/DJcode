@@ -162,7 +162,7 @@ int main(int argc, char *argv[]) {
 
     printf("DJ Code WAV Generator\n");
 
-    token_filename = "../Lexer_Parser/formatted_tokens.txt";
+    token_filename = "../Lexer_Parser/transformed_tokens.txt";
     output_filename = "../NEW_DJcode_Beats.wav";
     num_patterns = 0;
     num_play_commands = 0;
