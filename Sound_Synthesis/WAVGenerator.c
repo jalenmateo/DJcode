@@ -12,12 +12,12 @@ void initWavHeader(WavHeader *header, int32_t sample_rate, int16_t bits_per_samp
     if (!header) return;
 
     /* RIFF Chunk DO NOT CHANGE THIS*/
-    strncpy(header->riff, "RIFF", 4);
+    strncpy(header->riff, "RIFF", 5);
     /* flength will be calculated later based on data size. DO NOT CHANGE*/
-    strncpy(header->wave, "WAVE", 4);
+    strncpy(header->wave, "WAVE", 5);
 
     /* Format Chunk ("fmt ") DO NOT CHANGE THIS*/
-    strncpy(header->fmt, "fmt ", 4);
+    strncpy(header->fmt, "fmt ", 5);
     header->chunk_size = 16; /* Standard size for PCM*/
     header->format_tag = 1;  /* PCM*/
     header->num_chans = num_channels; /* can change. 1 is mono 2 is stereo ...*/
@@ -27,7 +27,7 @@ void initWavHeader(WavHeader *header, int32_t sample_rate, int16_t bits_per_samp
     header->bytes_per_sec = sample_rate * header->bytes_per_samp;
 
     /* Data Chunk. */
-    strncpy(header->data, "data", 4);
+    strncpy(header->data, "data", 5);
     /* dlength will be calculated later based on data size*/
 
     /* Initialize lengths to 0, they need to be set before writing*/
@@ -199,15 +199,15 @@ int main(int argc, char *argv[]) {
     }
 
     total_samples = total_beats * SAMPLES_PER_BEAT;
-    printf("Total beats: %zu, Total samples: %zu\n", total_beats, total_samples);
+    printf("Total beats: %lu, Total samples: %lu\n", (unsigned long) total_beats, (unsigned long) total_samples);
 
     /* Allocate buffer*/
     buffer = (int16_t *)calloc(total_samples, sizeof(int16_t));
     if (!buffer) {
-        fprintf(stderr, "Buffer allocation failed for %zu samples.\n", total_samples);
+        fprintf(stderr, "Buffer allocation failed for %lu samples.\n", (unsigned long)total_samples);
         return 1;
     }
-    printf("Allocated buffer for %zu samples.\n", total_samples);
+    printf("Allocated buffer for %lu samples.\n", (unsigned long) total_samples);
 
     /* Generate Audio*/
     printf("Generating audio...\n");
